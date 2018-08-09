@@ -1,0 +1,191 @@
+#include "Actuator.h"
+
+void Actuator::Actuator::extend() {
+  extend(255);
+}
+
+void Actuator::Actuator::extend(uint8_t pwm) {
+  digitalWrite(in1Pin, HIGH);
+  digitalWrite(in2Pin, LOW);
+  analogWrite(enaPin, pwm);
+}
+
+void Actuator::retract() {
+  retract(255);
+}
+
+void Actuator::retract(uint8_t pwm) {
+  digitalWrite(in1Pin, LOW);
+  digitalWrite(in2Pin, HIGH);
+  analogWrite(enaPin, pwm);
+}
+
+void Actuator::off() { // leave motor floating
+  digitalWrite(in1Pin, HIGH);
+  digitalWrite(in2Pin, HIGH);
+  digitalWrite(enaPin, LOW);
+}
+
+void Actuator::brake() {
+  digitalWrite(in1Pin, LOW);
+  digitalWrite(in2Pin, LOW);
+  digitalWrite(enaPin, LOW);
+}
+
+void Actuator::readPosition() {
+  total -= readings[index];                // subtract the last value
+  rawPosition = analogRead(feedbackPin);   // read the sensor
+  readings[index] = rawPosition;     // record the reading
+  total += readings[index];              // add the value
+  filtPosition = total / SMOOTH;     // average reading and update the filtered position
+
+  index++;
+  if (index >= SMOOTH) {  // reset index if at end of array
+    index = 0;
+  }
+}
+
+   
+Actuator::Actuator(byte attachToIn1Pin, byte attachToIn2Pin, byte attachToEnaPin, byte attachToFeedbackPin) :
+  in1Pin(attachToIn1Pin),
+  in2Pin(attachToIn2Pin),
+  enaPin(attachToEnaPin),
+  feedbackPin(attachToFeedbackPin) {
+     
+  isCalibrated = false;
+  calibrationStage = 0; 
+  maxPosition = 0;
+  minPosition = 0;
+  
+  isReady = false;
+  memset(readings, 0, sizeof(readings));
+  index = 0;
+  total = 0;
+  targetPosition = 512;
+  readPosition();
+}
+
+void Actuator::setup() {
+  pinMode(in1Pin, OUTPUT);
+  pinMode(in2Pin, OUTPUT);
+  pinMode(enaPin, OUTPUT);
+  pinMode(feedbackPin, INPUT);
+  off();
+}
+
+void Actuator::loop() {
+  readPosition();
+  if (isCalibrated && !isReady) {
+    /*
+    Serial.print("Upper limit: "); Serial.println(targetPosition + TOLERANCE);
+    Serial.print("Lower limit: "); Serial.println(targetPosition - TOLERANCE);
+    Serial.print("Current position: "); Serial.println(filtPosition);
+    Serial.print("Raw position: "); Serial.println(rawPosition);
+    */
+    if (filtPosition <= targetPosition + TOLERANCE && filtPosition >= targetPosition - TOLERANCE) { 
+      //Serial.println("stop");
+      brake();
+      isReady = true;
+    } else if (filtPosition > targetPosition + TOLERANCE) { 
+      //Serial.println("extend"); 
+      extend();
+    } else if (filtPosition < targetPosition - TOLERANCE) { 
+      //Serial.println("retract");
+      retract();
+    }
+  }
+}
+
+/* calibration stages
+   0 - extend for initial max 
+   1 - set initial max 
+   2 - retract for final max
+   3 - extend for final max
+   4 - set final max
+   5 - retract for initial min
+   6 - set initial min
+   7 - extend for final min
+   8 - retract for final min
+   9+ - set final min, done   */
+bool Actuator::calibrate() {
+  switch (calibrationStage) {
+    case 0: 
+    case 7: extend();
+            break;
+
+    case 3: extend(127);
+            break;
+
+    case 2:
+    case 5: retract();
+            break;
+    
+    case 8: retract(127);
+            break;
+            
+    case 1:
+    case 4:
+    case 6:
+    case 9: for(int i = 0; i < SMOOTH; i++)
+              readPosition();
+            brake();
+            break;
+    
+    default:break;
+  }
+
+  switch (calibrationStage) {
+    case 1: minPosition = filtPosition;
+            break;
+
+    case 4: minPosition = max(minPosition, filtPosition);
+            break;
+
+    case 6: maxPosition = filtPosition;
+            break;
+
+    case 9: maxPosition = min(maxPosition, filtPosition);
+            break;
+
+    default: break;
+  }
+  calibrationStage++;
+  if(calibrationStage > NUM_CALIB_STAGES) {
+    calibrationStage = 0;
+    isCalibrated = true;
+    isReady = true;
+  }
+  
+  return isCalibrated;
+}
+
+void Actuator::setLength(double relativeLength) {
+  if (isCalibrated && isReady && relativeLength >= 0 && relativeLength <= 1) {
+    isReady = false;
+    targetPosition = minPosition + (maxPosition - minPosition) * relativeLength;
+  }
+}
+
+bool Actuator::isActuatorReady() {
+  return isReady;
+}
+
+int Actuator::getRawPosition() {
+  return rawPosition;
+}
+
+int Actuator::getPosition() {
+  return filtPosition;
+}
+
+int Actuator::getTargetPosition() {
+  return targetPosition;
+}
+
+int Actuator::getMaxPosition() {
+  return maxPosition;
+}
+
+int Actuator::getMinPosition() {
+  return minPosition;
+}
