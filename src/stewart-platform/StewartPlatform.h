@@ -26,7 +26,8 @@ class StewartPlatform {
     void loop();
 
     void calibrate();
-    bool setPlatformLengths(double (&lengths)[6]);
+    void calibrate(uint16_t (&settings)[NUM_ACTUATORS][2]);
+    bool setPlatformLengths(double (&lengths)[NUM_ACTUATORS]);
     
     int getActuatorRawPosition(int actuator);
     int getActuatorPosition(int actuator);
@@ -34,8 +35,8 @@ class StewartPlatform {
     int getActuatorMaxPosition(int actuator);
     int getActuatorMinPosition(int actuator);
 
-    bool getActuatorReady(int actuator);
-    bool getPlatformReady();
+    bool isActuatorReady(int actuator);
+    bool isPlatformReady();
 };
 
 #endif

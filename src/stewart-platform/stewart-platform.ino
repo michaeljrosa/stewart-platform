@@ -10,16 +10,17 @@
 #include "configuration.h"
 #include "Actuator.h"
 #include "StewartPlatform.h"
+#include "eeprom.h"
 
 // graphing 
 #define GRAPH 0  // 0, don't graph; >0, graph
 #define RAW   0  // 0, filtered data; >0, raw data
 #define WHICH_ACTUATOR 0  // which actuator to graph data from, 0-5
 
-bool isGoingUp = true;
-double  high[] = {0.9, 0.9, 0.9, 0.9, 0.9, 0.9};
-double  low[] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
-double  mid[] = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+bool positionFlag = true;
+double high[] = {0.9, 0.9, 0.9, 0.9, 0.9, 0.9};
+double low[] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
+double mid[] = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
 
 // ------ main program ------ //
 StewartPlatform platform;
@@ -32,21 +33,23 @@ void setup() {
 
   platform.setup();
 
-  Serial.println("Actuator info");
-  for (int i = 0; i < NUM_ACTUATORS; i++) {
-    Serial.print("Actuator "); Serial.print(i); 
-    Serial.print(" position: ");
-    Serial.println(platform.getActuatorPosition(i));
-    Serial.print("min: "); 
-    Serial.println(platform.getActuatorMinPosition(i));
-    Serial.print("max: "); 
-    Serial.println(platform.getActuatorMaxPosition(i));
-    Serial.print("target: ");
-    Serial.println(platform.getActuatorTarget(i));
-    Serial.print("ready: ");
-    Serial.println(platform.getActuatorReady(i));
-    Serial.println();
-  } 
+  #if VERBOSE > 0
+    Serial.println("Actuator info");
+    for (int i = 0; i < NUM_ACTUATORS; i++) {
+      Serial.print("Actuator "); Serial.print(i); 
+      Serial.print(" position: ");
+      Serial.println(platform.getActuatorPosition(i));
+      Serial.print("min: "); 
+      Serial.println(platform.getActuatorMinPosition(i));
+      Serial.print("max: "); 
+      Serial.println(platform.getActuatorMaxPosition(i));
+      Serial.print("target: ");
+      Serial.println(platform.getActuatorTarget(i));
+      Serial.print("ready: ");
+      Serial.println(platform.getActuatorReady(i));
+      Serial.println();
+    } 
+  #endif
 }
 
 void loop() {
@@ -62,17 +65,12 @@ void loop() {
     #endif
   #endif
 
-  /*if (platform.getPlatformReady()) {
-        if(isGoingUp) {
+  if (platform.isPlatformReady()) {
+        if(positionFlag) {
           platform.setPlatformLengths(high);
-          isGoingUp = false;
         } else {
           platform.setPlatformLengths(low);
-          isGoingUp = true;
         }
-   }*/
-   
-   if (platform.getPlatformReady()) {
-    platform.setPlatformLengths(mid);
+        positionFlag = !positionFlag;
    }
 }

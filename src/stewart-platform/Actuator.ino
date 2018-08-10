@@ -107,20 +107,20 @@ void Actuator::loop() {
    7 - extend for final min
    8 - retract for final min
    9+ - set final min, done   */
-bool Actuator::calibrate() {
+void Actuator::calibrate() {
   switch (calibrationStage) {
     case 0: 
     case 7: extend();
             break;
 
-    case 3: extend(127);
+    case 3: extend(255 * CALIB_SPEED_RATIO);
             break;
 
     case 2:
     case 5: retract();
             break;
     
-    case 8: retract(127);
+    case 8: retract(255 * CALIB_SPEED_RATIO);
             break;
             
     case 1:
@@ -155,8 +155,13 @@ bool Actuator::calibrate() {
     isCalibrated = true;
     isReady = true;
   }
-  
-  return isCalibrated;
+}
+
+void Actuator::calibrate(uint16_t (&settings)[2]) {
+  maxPosition = settings[0];
+  minPosition = settings[1];
+  isCalibrated = true;
+  isReady = true;
 }
 
 void Actuator::setLength(double relativeLength) {

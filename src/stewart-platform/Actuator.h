@@ -9,7 +9,7 @@ class Actuator {
     const byte in2Pin;
     const byte enaPin;
     const byte feedbackPin;
-    
+
     int maxPosition;
     int minPosition;
     bool isCalibrated;
@@ -38,7 +38,8 @@ class Actuator {
     void setup();
     void loop();
   	
-  	bool calibrate();
+  	void calibrate();
+    void calibrate(uint16_t (&settings)[2]);
   	void setLength(double relativeLength);
     
   	bool isActuatorReady();
