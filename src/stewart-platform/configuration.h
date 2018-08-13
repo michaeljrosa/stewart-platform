@@ -4,6 +4,16 @@
 // verbose debug output
 #define VERBOSE     0  // 0, not verbose; >0 verbose
 
+/* graphing data output
+ * data comes out as comma separated values in the format...
+ * A1 max, A2 max, B1 max, ... C2 max
+ * A1 min, A2 min, B1 min, ... C2 min
+ * (blank line)
+ * A1 filt, A1 raw, A2 filt, A2 raw, B1 filt, ... C2 raw 
+ * (previous line repeated indefinitely)
+ */
+#define GRAPH 0  // 0, no graph data; >0, graph data
+
 // constants for sensor readings/movement
 #define SMOOTH      5  // smoothing factor, 5-50
 #define TOLERANCE  30  // 3% of 1024, can probably be lowered moving foward with speed control

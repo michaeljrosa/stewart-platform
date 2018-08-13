@@ -12,15 +12,15 @@
 #include "StewartPlatform.h"
 #include "eeprom.h"
 
-// graphing 
-#define GRAPH 0  // 0, don't graph; >0, graph
-#define RAW   0  // 0, filtered data; >0, raw data
-#define WHICH_ACTUATOR 0  // which actuator to graph data from, 0-5
 
+#define MAX_COUNT 5
+int count = 0;
+bool finished = false;
 bool positionFlag = true;
 double high[] = {0.9, 0.9, 0.9, 0.9, 0.9, 0.9};
 double low[] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
 double mid[] = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+
 
 // ------ main program ------ //
 StewartPlatform platform;
@@ -50,27 +50,51 @@ void setup() {
       Serial.println();
     } 
   #endif
+
+  #if GRAPH > 0
+    // print the min and max positions of each actuator
+    for (int i = 0; i < NUM_ACTUATORS; i++) {
+      Serial.print(platform.getActuatorMaxPosition(i));
+      Serial.print(',');
+    }
+    Serial.println();
+    for (int i = 0; i < NUM_ACTUATORS; i++) {
+      Serial.print(platform.getActuatorMinPosition(i));
+      Serial.print(',');
+    }
+    Serial.println();
+    Serial.println();
+  #endif
+  
+  platform.setPlatformLengths(mid);
 }
 
 void loop() {
   platform.loop();
 
   #if GRAPH > 0
-    #if (WHICH_ACTUATOR >= 0 && WHICH_ACTUATOR < NUM_ACTUATORS) 
-      #if RAW > 0
-        Serial.println(platform.getActuatorRawPosition(WHICH_ACTUATOR));
-      #else
-        Serial.println(platform.getActuatorPosition(WHICH_ACTUATOR));
-      #endif
-    #endif
+    // print the current raw and filtered positions of each actuator
+    for (int i = 0; i < NUM_ACTUATORS; i++) {
+      Serial.print(platform.getActuatorPosition(i));
+      Serial.print(',');
+      Serial.print(platform.getActuatorRawPosition(i));
+      Serial.print(',');
+    } 
+    Serial.println();
   #endif
 
-  if (platform.isPlatformReady()) {
-        if(positionFlag) {
-          platform.setPlatformLengths(high);
-        } else {
-          platform.setPlatformLengths(low);
-        }
-        positionFlag = !positionFlag;
-   }
+  if (!finished) {
+    if (platform.isPlatformReady() && count < MAX_COUNT) {
+      if(positionFlag) {
+        platform.setPlatformLengths(high);
+      } else {
+        platform.setPlatformLengths(low);
+      }
+      positionFlag = !positionFlag;
+      count++;
+     } else if (count >= MAX_COUNT && platform.isPlatformReady()) {
+      platform.setPlatformLengths(mid);
+      finished = true;
+     }
+  }
 }
