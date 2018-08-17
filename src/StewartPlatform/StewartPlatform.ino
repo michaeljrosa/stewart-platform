@@ -9,27 +9,46 @@
 
 #include "configuration.h"
 #include "Actuator.h"
-#include "StewartPlatform.h"
+#include "Platform.h"
 #include "eeprom.h"
 
+int count2 = 0;
 
-#define MAX_COUNT 5
-int count = 0;
-bool finished = false;
-bool positionFlag = true;
-double high[] = {0.9, 0.9, 0.9, 0.9, 0.9, 0.9};
-double low[] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
-double mid[] = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+#if DEMO > 0
+  float positions[][6] = {
+    {0,0,0,0,0,0},
+    {0,0,15,0,0,0},
+    
+    {0,-5,5,0,0,0},
+    {0,5 ,5,0,0,0},
+    
+    {-5,0,5,0,0,0},
+    {5,0,5,0,0,0},
+    
+    {0,0,10,-1,0,0},
+    {0,0,10,1,0,0},
+    
+    {0,0,5,0,-1,0},
+    {0,0,5,0,1,0},
+    
+    {0,0,10,0,0,-1},
+    {0,0,10,0,0,1},
+  };
+#else
+  #define POINTS 20
+#endif
 
 
 // ------ main program ------ //
-StewartPlatform platform;
+Platform platform;
   
 void setup() {
   Serial.begin(9600);
 
   // set the analog ref (5V regulator)
   analogReference(EXTERNAL);
+
+  pinMode(SHDN_BTN, INPUT_PULLUP);
 
   platform.setup();
 
@@ -46,7 +65,7 @@ void setup() {
       Serial.print("target: ");
       Serial.println(platform.getActuatorTarget(i));
       Serial.print("ready: ");
-      Serial.println(platform.getActuatorReady(i));
+      Serial.println(platform.isActuatorReady(i));
       Serial.println();
     } 
   #endif
@@ -65,11 +84,35 @@ void setup() {
     Serial.println();
     Serial.println();
   #endif
-  
-  platform.setPlatformLengths(mid);
 }
 
 void loop() {
+  if(digitalRead(SHDN_BTN) == LOW) {
+    platform.retract();
+  } else {
+    #if DEMO > 0
+      if (platform.isPlatformReady()) {
+        platform.setPlatformPosition(positions[count2]);
+        count2++;
+        if (count2 >= sizeof(positions) / NUM_ACTUATORS / sizeof(int)) {
+          count2 = 0;
+        }
+      }
+    #else
+      if (platform.isPlatformReady()) {
+        float ratio = (float)count2 / POINTS;
+        float p[] = {5*cos(TWO_PI * ratio), 5*sin(TWO_PI * ratio), 5*sin(TWO_PI * ratio * 3)+6, 
+                      0.5*sin(TWO_PI * ratio),0.5*cos(TWO_PI * ratio),0.33*sin(TWO_PI * ratio)};
+        platform.setPlatformPosition(p);
+        
+        count2++;
+        if (count2 > POINTS) {
+          count2 = 0;
+        }
+      }
+    #endif
+  }
+  
   platform.loop();
 
   #if GRAPH > 0
@@ -82,19 +125,4 @@ void loop() {
     } 
     Serial.println();
   #endif
-
-  if (!finished) {
-    if (platform.isPlatformReady() && count < MAX_COUNT) {
-      if(positionFlag) {
-        platform.setPlatformLengths(high);
-      } else {
-        platform.setPlatformLengths(low);
-      }
-      positionFlag = !positionFlag;
-      count++;
-     } else if (count >= MAX_COUNT && platform.isPlatformReady()) {
-      platform.setPlatformLengths(mid);
-      finished = true;
-     }
-  }
 }

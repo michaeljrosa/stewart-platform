@@ -35,9 +35,9 @@ void Actuator::brake() {
 void Actuator::readPosition() {
   total -= readings[index];                // subtract the last value
   rawPosition = analogRead(feedbackPin);   // read the sensor
-  readings[index] = rawPosition;     // record the reading
-  total += readings[index];              // add the value
-  filtPosition = total / SMOOTH;     // average reading and update the filtered position
+  readings[index] = rawPosition;           // record the reading
+  total += readings[index];                // add the value
+  filtPosition = total / SMOOTH;           // average reading and update the filtered position
 
   index++;
   if (index >= SMOOTH) {  // reset index if at end of array
@@ -76,21 +76,12 @@ void Actuator::setup() {
 void Actuator::loop() {
   readPosition();
   if (isCalibrated && !isReady) {
-    /*
-    Serial.print("Upper limit: "); Serial.println(targetPosition + TOLERANCE);
-    Serial.print("Lower limit: "); Serial.println(targetPosition - TOLERANCE);
-    Serial.print("Current position: "); Serial.println(filtPosition);
-    Serial.print("Raw position: "); Serial.println(rawPosition);
-    */
     if (filtPosition <= targetPosition + TOLERANCE && filtPosition >= targetPosition - TOLERANCE) { 
-      //Serial.println("stop");
       brake();
       isReady = true;
     } else if (filtPosition > targetPosition + TOLERANCE) { 
-      //Serial.println("extend"); 
       extend();
     } else if (filtPosition < targetPosition - TOLERANCE) { 
-      //Serial.println("retract");
       retract();
     }
   }
@@ -164,9 +155,14 @@ void Actuator::calibrate(uint16_t (&settings)[2]) {
   isReady = true;
 }
 
-void Actuator::setLength(double relativeLength) {
-  if (isCalibrated && isReady && relativeLength >= 0 && relativeLength <= 1) {
+void Actuator::setLength(float relativeLength) {
+  if (isCalibrated && isReady) {
     isReady = false;
+    if (relativeLength < 0) {
+      relativeLength = 0;
+    } else if (relativeLength > 1) {
+      relativeLength = 1;
+    }
     targetPosition = minPosition + (maxPosition - minPosition) * relativeLength;
   }
 }

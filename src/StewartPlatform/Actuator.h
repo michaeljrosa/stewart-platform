@@ -40,7 +40,7 @@ class Actuator {
   	
   	void calibrate();
     void calibrate(uint16_t (&settings)[2]);
-  	void setLength(double relativeLength);
+  	void setLength(float relativeLength);
     
   	bool isActuatorReady();
     int getRawPosition();

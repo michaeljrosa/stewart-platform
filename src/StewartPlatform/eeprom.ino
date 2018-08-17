@@ -1,6 +1,6 @@
 #include <EEPROM.h>
 #include "configuration.h"
-#include "StewartPlatform.h"
+#include "Platform.h"
 
 uint32_t EEPROM_crc(int addr)
 {
@@ -40,7 +40,7 @@ void EEPROM_updateCycles() {
   EEPROM.update(ADDR_CYCLES, cycles);
 }
 
-void saveConfig(StewartPlatform &platform) {
+void saveConfig(Platform &platform) {
    uint16_t a1[] = {
      (uint16_t)platform.getActuatorMinPosition(0),
      (uint16_t)platform.getActuatorMaxPosition(0)
@@ -75,7 +75,7 @@ void saveConfig(StewartPlatform &platform) {
    EEPROM.put(ADDR_CALIB_C2, c2);
 }
 
-void loadConfig(StewartPlatform &platform) {
+void loadConfig(Platform &platform) {
   uint32_t crcOld;
   EEPROM.get(ADDR_CRC, crcOld);
   uint32_t crcNew = EEPROM_crc(ADDR_CRC);
